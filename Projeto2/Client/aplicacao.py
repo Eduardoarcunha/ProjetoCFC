@@ -10,6 +10,7 @@
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
 
+from distutils import command
 from Client.utils import randomCommands
 from enlace import *
 import time
@@ -33,10 +34,8 @@ def main():
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
 
-        comands, nComands = randomCommands()
 
         com1 = enlace(serialName)
-        
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
@@ -48,6 +47,16 @@ def main():
 
         #Imagem a ser copiada
         
+        comands, nComands = randomCommands()
+
+        for n in range(nComands*2):
+            if n // 2 == 0:
+                txBuffer = bytes[comands[1]]
+            else:
+                txBuffer = comands[0]
+
+            com1.sendData(np.asarray(txBuffer))
+            
 
         #txBuffer = variável com os comandos em bytes!
         txBuffer = comands
@@ -63,7 +72,7 @@ def main():
         print('Transmissao vai comecar')
   
         #Envia os dados no txBuffer
-        com1.sendData(np.asarray(txBuffer))
+        
        
         # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
         # Tente entender como esse método funciona e o que ele retorna
@@ -93,9 +102,7 @@ def main():
 
         print('O tempo total foi de: {}'.format(total_time))
 
-        f = open(imageW,'wb')
-        f.write(rxBuffer)
-        f.close()
+        print('O numero recebido foi:{}'.format(rxBuffer))
     
         # Encerra comunicação
         print("-------------------------")
