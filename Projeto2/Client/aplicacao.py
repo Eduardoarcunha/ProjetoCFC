@@ -10,6 +10,7 @@
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
 
+from Client.utils import randomCommands
 from enlace import *
 import time
 import numpy as np
@@ -31,6 +32,9 @@ def main():
         start_time = time.time()
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
+
+        comands, nComands = randomCommands()
+
         com1 = enlace(serialName)
         
     
@@ -43,13 +47,10 @@ def main():
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
 
         #Imagem a ser copiada
-        imageR = './cr7.jpg'
-
-        #Local onde será copiada a imagem
-        imageW = './cr7Copia.jpg'
         
-        #txBuffer = variável com a imagem em bytes!
-        txBuffer = open(imageR,'rb').read()
+
+        #txBuffer = variável com os comandos em bytes!
+        txBuffer = comands
         #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
 
         print('Foram enviados {} bytes'.format(len(txBuffer)))
@@ -68,7 +69,7 @@ def main():
         # Tente entender como esse método funciona e o que ele retorna
 
         #Time sleep para a função 
-        #time.sleep(5)
+        time.sleep(5)
 
         #Retorna quantos bytes foram escritos
         txSize = com1.tx.getStatus()
