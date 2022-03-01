@@ -1,4 +1,5 @@
 import random
+import time
 
 def randomCommands():
     Comands = []
@@ -19,3 +20,15 @@ def randomCommands():
 
     return Comands, n
 
+def sendSacrifice(com1):
+    time.sleep(.35)
+    com1.sendData(b'00')
+    time.sleep(.35)
+    return
+
+def receiveSacrifice(com1):
+    rxBuffer, nRx = com1.getData(1)
+    com1.rx.clearBuffer()
+    time.sleep(.2)
+
+    return rxBuffer, nRx

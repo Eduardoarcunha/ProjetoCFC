@@ -13,6 +13,7 @@
 from enlace import *
 import time
 import numpy as np
+import utils
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -22,79 +23,70 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM4"                  # Windows(variacao de)
+serialName = "COM8"                  # Windows(variacao de)
 
 
 def main():
     try:
         #Registra tempo inicial
         start_time = time.time()
+
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
-        com1 = enlace(serialName)
-        
+        com1 = enlace(serialName)      
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
-        #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
+
+        state = 0
+        nBytes = 0
+        nComands = 0
+
+        while True:
+            if state == 0 and com1.rx.getBufferLen() > 0:
+                #Recebendo byte de sacrificio
+                rxBuffer, nRx = utils.receiveSacrifice(com1)
+                state = 1
+
+
+            elif state == 1:
+                print("Recebendo n Bytes do próximo comando")
+                print("Rx antes de ler {}".format(rxBuffer))
+                
+                rxBuffer, nRx = com1.getData(1)
+                time.sleep(.2)
+
+                #Finaliza recepção
+                if rxBuffer == b'\xff':
+                    com1.rx.clearBuffer()
+                    break
+
+                nBytes = int.from_bytes(rxBuffer,'big')
+                state = 2
+
+                print("Byte que chegou: {0} ({1}) \n".format(rxBuffer,nBytes))
+
+            elif state == 2 and com1.rx.getBufferLen() > 0:
+                #Recebendo byte de sacrificio
+                rxBuffer, nRx = utils.receiveSacrifice(com1)
+                state = 3
+                
+            elif state == 3:
+                rxBuffer, nRx = com1.getData(nBytes)
+                time.sleep(.2)
+                nComands += 1
+                state = 0
+                
+                print('Comando que chegou: {0} ({1})\n'.format(rxBuffer,len(rxBuffer)))
+
+        #Enviando número de comandos
+        #Bit de sacrificio
+        utils.sendSacrifice(com1)
         
-        #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
-        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
 
-        #Imagem a ser copiada
-        imageR = './cr7.jpg'
-
-        #Local onde será copiada a imagem
-        imageW = './cr7Copia.jpg'
-        
-        #txBuffer = variável com a imagem em bytes!
-        txBuffer = open(imageR,'rb').read()
-        #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
-
-        print('Foram enviados {} bytes'.format(len(txBuffer)))
-       
-            
-        #finalmente vamos transmitir os tados. Para isso usamos a funçao sendData que é um método da camada enlace.
-        #faça um print para avisar que a transmissão vai começar.
-        #tente entender como o método send funciona!
-        #Cuidado! Apenas trasmitimos arrays de bytes! Nao listas!
-        print('Transmissao vai comecar')
-  
-        #Envia os dados no txBuffer
-        com1.sendData(np.asarray(txBuffer))
-       
-        # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
-        # Tente entender como esse método funciona e o que ele retorna
-
-        #Time sleep para a função 
-        #time.sleep(5)
-
-        #Retorna quantos bytes foram escritos
-        txSize = com1.tx.getStatus()
-        print('Quantos bytes foram escritos'.format(txSize))
-        #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
-        #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.
-        print('Recepção vai começar')
-        
-        #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
-        #Veja o que faz a funcao do enlaceRX  getBufferLen
-      
-        #acesso aos bytes recebidos
-        txLen = len(txBuffer)
-        rxBuffer, nRx = com1.getData(txLen)
-        #print("recebeu {}" .format(rxBuffer))
-            
-        print('Foram recebidos {} bytes'.format(len(rxBuffer)))
-
-        total_time = time.time() - start_time
-
-        print('O tempo total foi de: {}'.format(total_time))
-
-        f = open(imageW,'wb')
-        f.write(rxBuffer)
-        f.close()
+        #Envia nComands
+        nComands = nComands.to_bytes(1, byteorder='big')
+        com1.sendData(nComands)
     
         # Encerra comunicação
         print("-------------------------")
