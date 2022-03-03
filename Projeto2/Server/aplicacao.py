@@ -23,7 +23,7 @@ import utils
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM8"                  # Windows(variacao de)
+serialName = "COM7"                  # Windows(variacao de)
 
 
 def main():
@@ -54,11 +54,12 @@ def main():
                 print("Rx antes de ler {}".format(rxBuffer))
                 
                 rxBuffer, nRx = com1.getData(1)
-                time.sleep(.2)
+                
 
                 #Finaliza recepção
                 if rxBuffer == b'\xff':
                     com1.rx.clearBuffer()
+                    
                     break
 
                 nBytes = int.from_bytes(rxBuffer,'big')
@@ -66,16 +67,14 @@ def main():
 
                 print("Byte que chegou: {0} ({1}) \n".format(rxBuffer,nBytes))
 
-            elif state == 2 and com1.rx.getBufferLen() > 0:
-                #Recebendo byte de sacrificio
-                rxBuffer, nRx = utils.receiveSacrifice(com1)
-                state = 3
+           
                 
-            elif state == 3:
+            elif state == 2:
                 rxBuffer, nRx = com1.getData(nBytes)
-                time.sleep(.2)
+            
+                
                 nComands += 1
-                state = 0
+                state = 1
                 
                 print('Comando que chegou: {0} ({1})\n'.format(rxBuffer,len(rxBuffer)))
 
@@ -85,7 +84,7 @@ def main():
         
 
         #Envia nComands
-        nComands = nComands.to_bytes(1, byteorder='big')
+        nComands = (nComands+1).to_bytes(1, byteorder='big')
         com1.sendData(nComands)
     
         # Encerra comunicação
