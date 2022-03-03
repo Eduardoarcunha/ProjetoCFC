@@ -17,8 +17,17 @@ def randomCommands():
     for n in range(nComands):
         i = random.randint(1,6)
         Comands.append(ComandsDic['COMAND' + str(i)])
+        #print(ComandsDic['COMAND' + str(i)])
 
-    return Comands, n
+    ComandsArray = bytearray(b'')
+
+    for n in range(nComands):
+        ComandsArray.append(Comands[n][1])
+        ComandsArray.extend(Comands[n][0])
+
+    ComandsArray.extend(b'\xff')
+
+    return ComandsArray, n + 1
 
 def sendSacrifice(com1):
     time.sleep(.35)

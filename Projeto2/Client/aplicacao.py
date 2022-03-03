@@ -46,42 +46,24 @@ def main():
 
         #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')
-        print(nComands)
-
-
-        for n in range(nComands):
-
-            #Bit de sacrificio
-            utils.sendSacrifice(com1)
-
-            #Envia nBytes do comando
-            nBytes = comands[n][1]
-            txBuffer = nBytes.to_bytes(1,'big')
-            com1.sendData(np.asarray(txBuffer))
-            print("Enviando número de bytes: \n{0} bytes ({1})".format(nBytes,txBuffer))
-            time.sleep(.05)
-
-
-            #Bit de sacrificio
-            utils.sendSacrifice(com1)
-
-            #Envia comando
-            txBuffer = comands[n][0]
-            com1.sendData(txBuffer)
-            time.sleep(.05)
-            print("Enviando comando: \n{0} ({1} bytes) \n".format(txBuffer,len(txBuffer)))
-
+        print('Enviou-se {0} comandos'.format(nComands))
 
         #Bit de sacrificio
         utils.sendSacrifice(com1)
 
-        #Envia comando
-        com1.sendData(b'\xff')
-        time.sleep(.05)
-        print('Transmissao vai terminar')
 
+        #Envia arrays
+        
+        com1.sendData(comands)
+        start_time = time.time()
 
         while True:
+            if time.time() - start_time >= 10:
+
+                print('Timeout!')
+
+                break
+
             if com1.rx.getBufferLen() > 0:
                 #Recebendo byte de sacrificio
                 rxBuffer, nRx = utils.receiveSacrifice(com1)
@@ -89,9 +71,11 @@ def main():
                 #Recebendo verdadeiro valor
                 rxBuffer, nRx = com1.getData(1)
                 response = int.from_bytes(rxBuffer,'big')
+                print('O servidor enviou de volta {} comandos'.format(response))
                 break
-
-        print('Enviou-se {} comandos'.format(response))
+            
+        if nComands != response:
+            print('Ocorreu um erro de interpretação!')
 
         # Encerra comunicação
         print("-------------------------")
