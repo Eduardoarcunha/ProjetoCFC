@@ -65,10 +65,33 @@ def main():
             
             #Verificando status servidor:
             com1.sendData(b'\x22')
+            time.sleep(0.5)
 
+            
             sacrifice = False
-            while time.time() - start_time <= 5:
-                if com1.rx.getBufferLen() > 0:
+            connecting = True
+
+            while connecting:
+                if time.time() - start_time > 5:
+                    invalid = True
+
+                    while invalid:
+                        resposta = input('Servidor inativo. Tentar novamente? S/N')
+                        if resposta == 'S':
+                            start_time = time.time()
+                            invalid = False
+
+                        elif resposta == 'N':
+                            print('escolheu N')
+                            connecting = False
+                            invalid = False
+                            transmission = False
+
+                        else:
+                            print('Resposta invalida')
+
+
+                elif com1.rx.getBufferLen() > 0:
                     if not sacrifice:
                         rxBuffer, nRx = receiveSacrifice(com1)
                         sacrifice = True
@@ -76,6 +99,7 @@ def main():
                         rxBuffer, nRx = com1.getData(1)
                         serverOn = True
                         break
+
                     
             #Se o server tiver respondido:
             if serverOn:
@@ -83,34 +107,26 @@ def main():
                 #Enviando pacotes
                 nPackage = 0
                 while nPackage < len(packages):
-                    #Bit de sacrificio
-                    sendSacrifice(com1)
-
                     print('Enviando pacote {}'.format(nPackage + 1))
                     #SendPackage
                     com1.sendData(packages[nPackage])
+                    time.sleep(0.5)
 
                     hold = True
-                    sacrifice = False
                     #Espera resposta:
                     while hold:
                         if com1.rx.getBufferLen() > 0:
-                            #Verifica se ja foi recebido um bit de sacrificio
-                            if not sacrifice:
-                                rxBuffer, nRx = receiveSacrifice(com1)
-                                sacrifice = True
+                            #Aguarda para poder enviar proxima resposta
+                            rxBuffer, nRx = com1.getData(1)
+                            hold = False
+
+                            if rxBuffer == b'\x55':
+                                print('{} pacote fracasso\n'.format(nPackage + 1))
+                                packages, i = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
+
                             else:
-                                #Aguarda para poder enviar proxima resposta
-                                rxBuffer, nRx = com1.getData(1)
-                                hold = False
-
-                                if rxBuffer == b'\x55':
-                                    print('{} pacote fracasso\n'.format(nPackage + 1))
-                                    packages, i = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
-
-                                else:
-                                    print('{} pacote sucesso\n'.format(nPackage + 1))
-                                    nPackage +=1
+                                print('{} pacote sucesso\n'.format(nPackage + 1))
+                                nPackage +=1
 
 
 
