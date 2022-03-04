@@ -71,6 +71,12 @@ def main():
 
             print('Recebendo pacotes')
             while n < nPackages:
+
+                #Possiveis erros!
+                eopError = False
+                indexError = False
+                payloadError = False
+
                 hold = True
                 sacrifice = False
 
@@ -81,8 +87,6 @@ def main():
                             rxBuffer, nRx = utils.receiveSacrifice(com1)
                             sacrifice = True
                         else:
-                            
-
                             print('Lendo pacote {}'.format(n + 1))
 
                             #Pega head
@@ -91,31 +95,50 @@ def main():
                             nPackage = int(head[1])
                             
                             if nPackage != n:
-                                print('deu ruim')
-
+                                print('Número do pacote incorreto!')
+                                indexError = True
+                                # hold = False
+                                # n = nPackages + 1
+                                # protocol = False
+                                # break
+                                
                             if nPackage == nPackages:
                                 protocol = False
 
                             payloadSize = int(head[2])
 
-                            #Pega payload
-                            payload, nPl = com1.getData(payloadSize)
+                            #Verifica tamanho payload
+                            if com1.rx.getBufferLen() != payloadSize + 4:
+                                payloadError = True
+                                print('-------------')
+                                print(com1.rx.getBufferLen(),payloadSize)
+                                print('Tamanho do payload incorreto!\nInformado: {0}\nReal: {1}'.format(payloadSize,int(com1.rx.getBufferLen()) - 4))
 
-                            message = message + payload
+                            #Pega payload
+                            if payloadError == False:
+                                payload, nPl = com1.getData(payloadSize)
+                                message = message + payload
 
                             #Pega EOP
                             eop, nEOP = com1.getData(4)
 
+                            if eop != b'\x00\x00\x00\x00':
+                                eopError = True
+
                             #Bit de sacrificio
                             utils.sendSacrifice(com1)
 
-                            time.sleep(.2)
                             #Envia resposta
-                            com1.sendData(b'\x44')
-
-                            print('Pacote {} recebido com sucesso \n'.format(n + 1))
-
-                            n +=1
+                            if not eopError and not indexError and not payloadError:
+                                com1.sendData(b'\x44')
+                                n +=1
+                                print('Pacote {} recebido com sucesso \n'.format(n))
+                            else:
+                                #Codigo de erro
+                                com1.sendData(b'\x55')
+                                print('Pacote {} não foi recebido com sucesso \n'.format(n + 1))
+                            
+                            
 
                             hold = False
             protocol = False

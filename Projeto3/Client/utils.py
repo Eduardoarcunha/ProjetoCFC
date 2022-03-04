@@ -43,7 +43,7 @@ def receiveSacrifice(com1):
 
     return rxBuffer, nRx
 
-def createPackages(message):
+def createPackages(message, falseIndex = False, falsePayload = False, falseEOP = False):
 
     packages = []
 
@@ -55,20 +55,34 @@ def createPackages(message):
     numberOfPackagesB = numberOfPackages.to_bytes(1,byteorder='big')
     nPackage = 0
 
+
+    if falseEOP:
+        eop = b'\x10\x30\x04\x20'
+    else:
+        eop = b'\x00\x00\x00\x00'
+
     #Creating packages
     while len(message) > 0:
 
         nPackageB = nPackage.to_bytes(1, byteorder='big')
-
+        
         payload = message[0:114]
         message = message[114:]
 
-        payloadSize = (len(payload)).to_bytes(1,byteorder='big')
+        if falsePayload and nPackage == 1:
+            payloadSize = (len(payload) - 3).to_bytes(1,byteorder='big')
 
-        head = numberOfPackagesB + nPackageB + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
-        eop = b'\x00\x00\x00\x00'
+        else:
+            payloadSize = (len(payload)).to_bytes(1,byteorder='big')
+
+
+
+        if falseIndex and nPackage == 2:
+            head = numberOfPackagesB +  (10).to_bytes(1, byteorder='big') + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
+            
+        else:
+            head = numberOfPackagesB + nPackageB + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
         
-
         package = head + payload + eop
 
         packages.append(package)

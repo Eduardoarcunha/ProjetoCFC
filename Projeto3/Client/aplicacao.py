@@ -42,11 +42,11 @@ def main():
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
-        imageR = './Client/Celeste.png'
+        imageR = './celeste.png'
         celeste = open(imageR,'rb').read()
 
         
-        packages, nPackages = createPackages(celeste)
+        packages, nPackages = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = True)
 
         #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')
@@ -56,6 +56,7 @@ def main():
 
         serverOn = False
         transmission = True
+        
 
         start_time = time.time()
         while transmission:
@@ -103,8 +104,15 @@ def main():
                                 rxBuffer, nRx = com1.getData(1)
                                 hold = False
 
-                    nPackage +=1
-                    print('{} pacote sucesso\n'.format(nPackage))
+                                if rxBuffer == b'\x55':
+                                    print('{} pacote fracasso\n'.format(nPackage + 1))
+                                    packages, i = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
+
+                                else:
+                                    print('{} pacote sucesso\n'.format(nPackage + 1))
+                                    nPackage +=1
+
+
 
                 transmission = False
 

@@ -9,6 +9,8 @@
 #esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
+from socket import timeout
+from tracemalloc import start
 import utils
 from enlace import *
 import time
@@ -22,7 +24,7 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM9"                  # Windows(variacao de)
+serialName = "COM8"                  # Windows(variacao de)
 
 def main():
     try:
@@ -60,11 +62,14 @@ def main():
         while True:
             if time.time() - start_time >= 10:
 
+
+                timeout = True
                 print('Timeout!')
 
                 break
 
             if com1.rx.getBufferLen() > 0:
+                timeout = False
                 #Recebendo byte de sacrificio
                 rxBuffer, nRx = utils.receiveSacrifice(com1)
 
@@ -74,8 +79,9 @@ def main():
                 print('O servidor enviou de volta {} comandos'.format(response))
                 break
             
-        if nComands != response:
-            print('Ocorreu um erro de interpretação!')
+        if not timeout:  
+            if nComands != response:
+                print('Ocorreu um erro de interpretação!')
 
         # Encerra comunicação
         print("-------------------------")
