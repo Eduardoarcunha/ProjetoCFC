@@ -21,13 +21,13 @@ def randomCommands():
     return Comands, n
 
 def sendSacrifice(com1):
-    time.sleep(.35)
+    time.sleep(.3)
     com1.sendData(b'00')
-    time.sleep(.35)
+    time.sleep(.3)
     return
 
 def receiveSacrifice(com1):
     rxBuffer, nRx = com1.getData(1)
     com1.rx.clearBuffer()
-    time.sleep(.2)
+    time.sleep(.1)
     return rxBuffer, nRx

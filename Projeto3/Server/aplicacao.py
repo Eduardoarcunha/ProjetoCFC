@@ -23,7 +23,7 @@ import utils
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM7"                  # Windows(variacao de)
+serialName = "COM8"                  # Windows(variacao de)
 
 
 def main():
@@ -38,54 +38,96 @@ def main():
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
 
-        state = 0
-        nBytes = 0
-        nComands = 0
-
-        while True:
-            if state == 0 and com1.rx.getBufferLen() > 0:
-                #Recebendo byte de sacrificio
-                rxBuffer, nRx = utils.receiveSacrifice(com1)
-                state = 1
+        message = b''
 
 
-            elif state == 1:
-                print("Recebendo n Bytes do próximo comando")
-                print("Rx antes de ler {}".format(rxBuffer))
-                
-                rxBuffer, nRx = com1.getData(1)
-                
+        protocol = True
+        while protocol:
+            print('Iniciando protocolo')
 
-                #Finaliza recepção
-                if rxBuffer == b'\xff':
-                    com1.rx.clearBuffer()
+            #Esperando contato:
+            hold = True
+            sacrifice = False
+            while hold:
+                if com1.rx.getBufferLen() > 0:
+                    #Verifica se ja foi recebido um bit de sacrificio
+                    if not sacrifice:
+                        rxBuffer, nRx = utils.receiveSacrifice(com1)
+                        sacrifice = True
+                    else:
+                        print('Recebendo pedido client')
+                        rxBuffer, nRx = com1.getData(1)
+                        hold = False
+
+            print('Enviando resposta')
+            #Bit de sacrificio
+            utils.sendSacrifice(com1)
+
+            #Envia resposta
+            com1.sendData(b'\x44')
+
+            n = 0
+            nPackages = 100
+
+            print('Recebendo pacotes')
+            while n < nPackages:
+                hold = True
+                sacrifice = False
+
+                while hold:
+                    if com1.rx.getBufferLen() > 0:
+                        #Verifica se ja foi recebido um bit de sacrificio
+                        if not sacrifice:
+                            rxBuffer, nRx = utils.receiveSacrifice(com1)
+                            sacrifice = True
+                        else:
+                            
+
+                            print('Lendo pacote {}'.format(n + 1))
+
+                            #Pega head
+                            head, nHd = com1.getData(10)
+                            nPackages = int(head[0])
+                            nPackage = int(head[1])
+                            
+                            if nPackage != n:
+                                print('deu ruim')
+
+                            if nPackage == nPackages:
+                                protocol = False
+
+                            payloadSize = int(head[2])
+
+                            #Pega payload
+                            payload, nPl = com1.getData(payloadSize)
+
+                            message = message + payload
+
+                            #Pega EOP
+                            eop, nEOP = com1.getData(4)
+
+                            #Bit de sacrificio
+                            utils.sendSacrifice(com1)
+
+                            time.sleep(.2)
+                            #Envia resposta
+                            com1.sendData(b'\x44')
+
+                            print('Pacote {} recebido com sucesso \n'.format(n + 1))
+
+                            n +=1
+
+                            hold = False
+            protocol = False
+            print('Fim do recebimento')
+
+        f = open('./celeste.png','wb')
+        f.write(message)
+        f.close()
                     
-                    break
 
-                nBytes = int.from_bytes(rxBuffer,'big')
-                state = 2
 
-                print("Byte que chegou: {0} ({1}) \n".format(rxBuffer,nBytes))
-
-           
-                
-            elif state == 2:
-                rxBuffer, nRx = com1.getData(nBytes)
-            
-                
-                nComands += 1
-                state = 1
-                
-                print('Comando que chegou: {0} ({1})\n'.format(rxBuffer,len(rxBuffer)))
-
-        #Enviando número de comandos
-        #Bit de sacrificio
-        utils.sendSacrifice(com1)
         
-
-        #Envia nComands
-        nComands = (nComands+1).to_bytes(1, byteorder='big')
-        com1.sendData(nComands)
     
         # Encerra comunicação
         print("-------------------------")

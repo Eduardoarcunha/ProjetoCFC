@@ -84,7 +84,7 @@ def main():
         
 
         #Envia nComands
-        nComands = (nComands+1).to_bytes(1, byteorder='big')
+        nComands = (nComands).to_bytes(1, byteorder='big')
         com1.sendData(nComands)
     
         # Encerra comunicação

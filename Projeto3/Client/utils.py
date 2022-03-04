@@ -1,5 +1,6 @@
 import random
 import time
+import numpy as np
 
 def randomCommands():
     Comands = []
@@ -30,14 +31,50 @@ def randomCommands():
     return ComandsArray, n + 1
 
 def sendSacrifice(com1):
-    time.sleep(.35)
+    time.sleep(.3)
     com1.sendData(b'00')
-    time.sleep(.35)
+    time.sleep(.3)
     return
 
 def receiveSacrifice(com1):
     rxBuffer, nRx = com1.getData(1)
     com1.rx.clearBuffer()
-    time.sleep(.2)
+    time.sleep(.1)
 
     return rxBuffer, nRx
+
+def createPackages(message):
+
+    packages = []
+
+    #Numero de pacotes
+    numberOfPackages = len(message) // 114
+    if len(message) % 114 > 0:
+        numberOfPackages += 1
+
+    numberOfPackagesB = numberOfPackages.to_bytes(1,byteorder='big')
+    nPackage = 0
+
+    #Creating packages
+    while len(message) > 0:
+
+        nPackageB = nPackage.to_bytes(1, byteorder='big')
+
+        payload = message[0:114]
+        message = message[114:]
+
+        payloadSize = (len(payload)).to_bytes(1,byteorder='big')
+
+        head = numberOfPackagesB + nPackageB + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
+        eop = b'\x00\x00\x00\x00'
+        
+
+        package = head + payload + eop
+
+        packages.append(package)
+        nPackage += 1
+
+    return packages, numberOfPackages
+
+
+#packages, nPackage = createPackages(cr7)

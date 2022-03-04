@@ -9,6 +9,7 @@
 #esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
+from utils import createPackages, receiveSacrifice, sendSacrifice
 import utils
 from enlace import *
 import time
@@ -27,7 +28,6 @@ serialName = "COM9"                  # Windows(variacao de)
 def main():
     try:
         #Registra tempo inicial
-        start_time = time.time()
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
 
@@ -42,40 +42,71 @@ def main():
         #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
         #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
-        comands, nComands = utils.randomCommands()
+        imageR = './Client/Celeste.png'
+        celeste = open(imageR,'rb').read()
+
+        
+        packages, nPackages = createPackages(celeste)
 
         #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')
-        print('Enviou-se {0} comandos'.format(nComands))
-
-        #Bit de sacrificio
-        utils.sendSacrifice(com1)
+        print('{} pacotes'.format(nPackages))
+        #print('Enviou-se {0} comandos'.format(nComands))
 
 
-        #Envia arrays
-        
-        com1.sendData(comands)
+        serverOn = False
+        transmission = True
+
         start_time = time.time()
-
-        while True:
-            if time.time() - start_time >= 10:
-
-                print('Timeout!')
-
-                break
-
-            if com1.rx.getBufferLen() > 0:
-                #Recebendo byte de sacrificio
-                rxBuffer, nRx = utils.receiveSacrifice(com1)
-
-                #Recebendo verdadeiro valor
-                rxBuffer, nRx = com1.getData(1)
-                response = int.from_bytes(rxBuffer,'big')
-                print('O servidor enviou de volta {} comandos'.format(response))
-                break
+        while transmission:
+            #Bit de sacrificio
+            utils.sendSacrifice(com1)
             
-        if nComands != response:
-            print('Ocorreu um erro de interpretação!')
+            #Verificando status servidor:
+            com1.sendData(b'\x22')
+
+            sacrifice = False
+            while time.time() - start_time <= 5:
+                if com1.rx.getBufferLen() > 0:
+                    if not sacrifice:
+                        rxBuffer, nRx = receiveSacrifice(com1)
+                        sacrifice = True
+                    else:
+                        rxBuffer, nRx = com1.getData(1)
+                        serverOn = True
+                        break
+                    
+            #Se o server tiver respondido:
+            if serverOn:
+                print('serverOn')
+                #Enviando pacotes
+                nPackage = 0
+                while nPackage < len(packages):
+                    #Bit de sacrificio
+                    sendSacrifice(com1)
+
+                    print('Enviando pacote {}'.format(nPackage + 1))
+                    #SendPackage
+                    com1.sendData(packages[nPackage])
+
+                    hold = True
+                    sacrifice = False
+                    #Espera resposta:
+                    while hold:
+                        if com1.rx.getBufferLen() > 0:
+                            #Verifica se ja foi recebido um bit de sacrificio
+                            if not sacrifice:
+                                rxBuffer, nRx = receiveSacrifice(com1)
+                                sacrifice = True
+                            else:
+                                #Aguarda para poder enviar proxima resposta
+                                rxBuffer, nRx = com1.getData(1)
+                                hold = False
+
+                    nPackage +=1
+                    print('{} pacote sucesso\n'.format(nPackage))
+
+                transmission = False
 
         # Encerra comunicação
         print("-------------------------")
