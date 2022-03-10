@@ -46,7 +46,7 @@ def main():
         celeste = open(imageR,'rb').read()
 
         
-        packages, nPackages = createPackages(celeste,falseIndex=True,falsePayload=False,falseEOP = False)
+        packages, nPackages = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
 
         #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')
@@ -72,17 +72,19 @@ def main():
             connecting = True
 
             while connecting:
+
                 if time.time() - start_time > 5:
                     invalid = True
-
                     while invalid:
                         resposta = input('Servidor inativo. Tentar novamente? S/N')
                         if resposta == 'S':
+                            print('Requisitando servidor novamente')
                             start_time = time.time()
                             invalid = False
+                            com1.sendData(b'\x22')
+                            time.sleep(.5)
 
                         elif resposta == 'N':
-                            print('escolheu N')
                             connecting = False
                             invalid = False
                             transmission = False

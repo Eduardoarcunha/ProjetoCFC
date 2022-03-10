@@ -48,6 +48,25 @@ def main():
             #Esperando contato:
             hold = True
             sacrifice = False
+
+            ready = True
+            wait = 2
+
+            while not ready:
+                if com1.rx.getBufferLen() > 0:
+                    if not sacrifice:
+                        rxBuffer, nRx = utils.receiveSacrifice(com1)
+                        sacrifice = True
+                    else:
+                        rxBuffer, nRx = com1.getData(1)
+                        com1.rx.clearBuffer()
+                        wait -= 1
+
+                        if wait == 0:
+                            ready = True
+
+
+            print('Recebendo pedido client')
             while hold:
                 if com1.rx.getBufferLen() > 0:
                     #Verifica se ja foi recebido um bit de sacrificio
