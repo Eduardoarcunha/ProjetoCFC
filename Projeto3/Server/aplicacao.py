@@ -23,7 +23,7 @@ import utils
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM8"                  # Windows(variacao de)
+serialName = "COM7"                  # Windows(variacao de)
 
 
 def main():
@@ -127,7 +127,6 @@ def main():
                         #Pega payload
                         if payloadError == False:
                             payload, nPl = com1.getData(payloadSize)
-                            message = message + payload
                         else:
                             payloadTrash, nPT = com1.getData(com1.rx.getBufferLen() - 4)
 
@@ -141,6 +140,7 @@ def main():
 
                         #Envia resposta
                         if not eopError and not indexError and not payloadError:
+                            message = message + payload
                             com1.sendData(b'\x44')
                             n +=1
                             print('Pacote {} recebido com sucesso \n'.format(n))
