@@ -31,3 +31,23 @@ def receiveSacrifice(com1):
     com1.rx.clearBuffer()
     time.sleep(.1)
     return rxBuffer, nRx
+
+def tipoErro(eopError,indexError,payloadError):
+    if eopError and indexError and payloadError:
+        erro = 'EOP, INDEX DO PACOTE, PAYLOAD'
+    elif eopError and indexError:
+        erro = 'EOP, INDEX DO PACOTE'
+    elif eopError and payloadError:
+        erro = "EOP, PAYLOAD"
+    elif indexError and payloadError:
+        erro = "INDEX DO PACOTE, PAYLOAD"
+    elif eopError:
+        erro = "EOP"
+    elif indexError:
+        erro = "INDEX DO PACOTE"
+    elif payloadError:
+        erro = "PAYLOAD"
+    else:
+        erro = None
+    
+    return erro

@@ -46,7 +46,7 @@ def main():
         celeste = open(imageR,'rb').read()
 
         
-        packages, nPackages = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = True)
+        packages, nPackages = createPackages(celeste,falseIndex=True,falsePayload=False,falseEOP = False)
 
         #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')
@@ -121,11 +121,14 @@ def main():
                             hold = False
 
                             if rxBuffer == b'\x55':
-                                print('{} pacote fracasso\n'.format(nPackage + 1))
+                                print('---------------------ALERTA---------------------')
+                                print('{} pacote foi fracasso'.format(nPackage + 1))
+                                print('Recriando pacote para envio')
+                                print('------------------------------------------------\n')
                                 packages, i = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
 
                             else:
-                                print('{} pacote sucesso\n'.format(nPackage + 1))
+                                print('{} pacote foi sucesso\n'.format(nPackage + 1))
                                 nPackage +=1
 
 

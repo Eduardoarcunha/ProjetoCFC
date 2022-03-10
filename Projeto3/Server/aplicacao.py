@@ -91,10 +91,6 @@ def main():
                         if nPackage != n:
                             print('Número do pacote incorreto!')
                             indexError = True
-                            # hold = False
-                            # n = nPackages + 1
-                            # protocol = False
-                            # break
                             
                         if nPackage == nPackages:
                             protocol = False
@@ -112,6 +108,8 @@ def main():
                         if payloadError == False:
                             payload, nPl = com1.getData(payloadSize)
                             message = message + payload
+                        else:
+                            payloadTrash, nPT = com1.getData(com1.rx.getBufferLen() - 4)
 
                         #Pega EOP
                         eop, nEOP = com1.getData(4)
@@ -119,16 +117,22 @@ def main():
                         if eop != b'\x00\x00\x00\x00':
                             eopError = True
 
+                        erro = utils.tipoErro(eopError,indexError,payloadError)
+
                         #Envia resposta
                         if not eopError and not indexError and not payloadError:
                             com1.sendData(b'\x44')
                             n +=1
                             print('Pacote {} recebido com sucesso \n'.format(n))
+                            time.sleep(0.7)
                         else:
                             #Codigo de erro
                             com1.sendData(b'\x55')
-                            print('Pacote {} não foi recebido com sucesso \n'.format(n + 1))
-                        time.sleep(0.7)
+
+                            print('---------------------ALERTA-----------------------')
+                            print('Pacote {} não foi recebido com sucesso (ERRO: {})'.format(n + 1,erro))
+                            print('--------------------------------------------------\n')
+                            time.sleep(1)
                         
                         
 
