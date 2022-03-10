@@ -46,7 +46,7 @@ def main():
         celeste = open(imageR,'rb').read()
 
         
-        packages, nPackages = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
+        packages, nPackages = createPackages(celeste,falseIndex=True,falsePayload=False,falseEOP = False)
 
         #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')

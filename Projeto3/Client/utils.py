@@ -52,36 +52,43 @@ def createPackages(message, falseIndex = False, falsePayload = False, falseEOP =
     if len(message) % 114 > 0:
         numberOfPackages += 1
 
+    #numero de pacotes em bytes
     numberOfPackagesB = numberOfPackages.to_bytes(1,byteorder='big')
+    
+    #Pacote atual
     nPackage = 0
 
-
-    if falseEOP:
-        eop = b'\x10\x30\x04\x20'
+    if falseIndex or falsePayload or falseEOP:
+        errorIndex = np.random.randint(1,numberOfPackages - 1)
+        print('O erro acontecerá no pacote {}\n'.format(errorIndex + 1))
     else:
-        eop = b'\x00\x00\x00\x00'
+        errorIndex = 0
 
     #Creating packages
     while len(message) > 0:
-
         nPackageB = nPackage.to_bytes(1, byteorder='big')
         
         payload = message[0:114]
         message = message[114:]
 
-        if falsePayload and nPackage == 1:
+        #Força um erro no tamanho do Payload se pedido
+        if falsePayload and nPackage == errorIndex:
             payloadSize = (len(payload) - 3).to_bytes(1,byteorder='big')
-
         else:
             payloadSize = (len(payload)).to_bytes(1,byteorder='big')
 
 
-
-        if falseIndex and nPackage == 2:
-            head = numberOfPackagesB +  (10).to_bytes(1, byteorder='big') + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
-            
+        #Força um erro no Index do pacote se necessário
+        if falseIndex and nPackage == errorIndex:
+            head = numberOfPackagesB +  (1).to_bytes(1, byteorder='big') + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
         else:
             head = numberOfPackagesB + nPackageB + payloadSize + b'\x00\x00\x00\x00\x00\x00\x00'
+
+        #Forca um erro no EOP se necessário
+        if falseEOP and nPackage == errorIndex:
+            eop = b'\x10\x30\x04\x20'
+        else:
+            eop = b'\x00\x00\x00\x00'
         
         package = head + payload + eop
 
@@ -89,6 +96,3 @@ def createPackages(message, falseIndex = False, falsePayload = False, falseEOP =
         nPackage += 1
 
     return packages, numberOfPackages
-
-
-#packages, nPackage = createPackages(cr7)

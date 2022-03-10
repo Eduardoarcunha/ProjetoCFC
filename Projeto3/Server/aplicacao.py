@@ -79,7 +79,7 @@ def main():
                         hold = False
 
             utils.sendSacrifice(com1)
-            print('Enviando resposta')
+            print('Enviando resposta\n')
 
             #Envia resposta
             com1.sendData(b'\x44')
@@ -87,6 +87,7 @@ def main():
             n = 0
             nPackages = 100
 
+            print('------------------')
             print('Recebendo pacotes')
             while n < nPackages:
 
