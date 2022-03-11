@@ -15,29 +15,19 @@ import time
 import numpy as np
 import utils
 
-# voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
-#   para saber a sua porta, execute no terminal :
 #   python -m serial.tools.list_ports
-# se estiver usando windows, o gerenciador de dispositivos informa a porta
 
-#use uma das 3 opcoes para atribuir à variável a porta usada
-#serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
-#serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM7"                  # Windows(variacao de)
+serialName = "COM7"
 
 
 def main():
     try:
-        #Registra tempo inicial
-        start_time = time.time()
-
-        #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
-        #para declarar esse objeto é o nome da porta.
         com1 = enlace(serialName)      
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
 
+        #Resposta final do cliente
         message = b''
 
 
@@ -49,6 +39,7 @@ def main():
             hold = True
             sacrifice = False
 
+            #Servidor pronto para responder?
             ready = True
             wait = 2
 
@@ -78,6 +69,7 @@ def main():
                         rxBuffer, nRx = com1.getData(1)
                         hold = False
 
+            #Envia bit de sacrificio
             utils.sendSacrifice(com1)
             print('Enviando resposta\n')
 
@@ -96,10 +88,10 @@ def main():
                 indexError = False
                 payloadError = False
 
-                hold = True
+                waiting = True
                 sacrifice = False
 
-                while hold:
+                while waiting:
                     if com1.rx.getBufferLen() > 0:
                         print('Lendo pacote {}'.format(n + 1))
 
@@ -145,6 +137,7 @@ def main():
                             n +=1
                             print('Pacote {} recebido com sucesso \n'.format(n))
                             time.sleep(0.7)
+                            
                         else:
                             #Codigo de erro
                             com1.sendData(b'\x55')
@@ -152,11 +145,11 @@ def main():
                             print('---------------------ALERTA-----------------------')
                             print('Pacote {} não foi recebido com sucesso (ERRO: {})'.format(n + 1,erro))
                             print('--------------------------------------------------\n')
+                            protocol = True
                             time.sleep(1)
                         
-                        
-
-                        hold = False
+                        waiting = False
+                    
             protocol = False
             print('Fim do recebimento')
 

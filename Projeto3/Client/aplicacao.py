@@ -27,20 +27,10 @@ serialName = "COM9"                  # Windows(variacao de)
 
 def main():
     try:
-        #Registra tempo inicial
-        #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
-        #para declarar esse objeto é o nome da porta.
-
-
         com1 = enlace(serialName)
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
-        #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
-        
-        #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são uma lista de bytes a serem transmitidos. Gere esta lista com o 
-        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
         
         imageR = './celeste.png'
         celeste = open(imageR,'rb').read()
@@ -48,15 +38,11 @@ def main():
         
         packages, nPackages = createPackages(celeste,falseIndex=False,falsePayload=True,falseEOP = False)
 
-        #Envia as informações numero de bytes depois comandos
         print('Transmissao vai comecar')
-        print('{} pacotes'.format(nPackages))
-        #print('Enviou-se {0} comandos'.format(nComands))
-
+        print('{} pacotes serão enviados'.format(nPackages))
 
         serverOn = False
         transmission = True
-        
 
         start_time = time.time()
         while transmission:
@@ -67,7 +53,6 @@ def main():
             com1.sendData(b'\x22')
             time.sleep(0.5)
 
-            
             sacrifice = False
             connecting = True
 
@@ -75,8 +60,11 @@ def main():
 
                 if time.time() - start_time > 5:
                     invalid = True
+
                     while invalid:
                         resposta = input('Servidor inativo. Tentar novamente? S/N')
+
+                        #Se a resposta for sim
                         if resposta == 'S':
                             print('Requisitando servidor novamente')
                             start_time = time.time()
@@ -84,19 +72,22 @@ def main():
                             com1.sendData(b'\x22')
                             time.sleep(.5)
 
+                        #Se a resposta for não
                         elif resposta == 'N':
                             connecting = False
                             invalid = False
                             transmission = False
 
+                        #Se a respostas for invalida
                         else:
                             print('Resposta invalida')
 
-
+                #Se chegou algo no Buffer do client
                 elif com1.rx.getBufferLen() > 0:
                     if not sacrifice:
                         rxBuffer, nRx = receiveSacrifice(com1)
                         sacrifice = True
+
                     else:
                         rxBuffer, nRx = com1.getData(1)
                         serverOn = True
@@ -105,22 +96,24 @@ def main():
                     
             #Se o server tiver respondido:
             if serverOn:
-                print('serverOn')
+                print('Server respondeu\n')
                 #Enviando pacotes
                 nPackage = 0
+
                 while nPackage < len(packages):
                     print('Enviando pacote {}'.format(nPackage + 1))
+                    
                     #SendPackage
                     com1.sendData(packages[nPackage])
                     time.sleep(0.5)
 
-                    hold = True
+                    waiting = True
                     #Espera resposta:
-                    while hold:
+                    while waiting:
                         if com1.rx.getBufferLen() > 0:
                             #Aguarda para poder enviar proxima resposta
                             rxBuffer, nRx = com1.getData(1)
-                            hold = False
+                            waiting = False
 
                             if rxBuffer == b'\x55':
                                 print('---------------------ALERTA---------------------')
@@ -132,8 +125,6 @@ def main():
                             else:
                                 print('{} pacote foi sucesso\n'.format(nPackage + 1))
                                 nPackage +=1
-
-
 
                 transmission = False
 
