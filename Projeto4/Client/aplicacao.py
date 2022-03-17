@@ -23,7 +23,7 @@ import numpy as np
 #use uma das 3 opcoes para atribuir à variável a porta usada
 #serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
-serialName = "COM8"                  # Windows(variacao de)
+serialName = "COM9"                  # Windows(variacao de)
 
 def main():
     try:
@@ -32,11 +32,14 @@ def main():
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
         
-        imageR = './celeste.png'
+        imageR = './Projeto4/Client/celeste.png'
         celeste = open(imageR,'rb').read()
 
         
-        packages, nPackages = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
+        #Cria pacotes, inclusive o handshake(package = 0)!
+
+        packages, nPackages = createPackages('transmission',celeste)
+        print(packages[0])
 
         print('Transmissao vai comecar')
         print('{} pacotes serão enviados'.format(nPackages))
@@ -49,11 +52,12 @@ def main():
             #Bit de sacrificio
             utils.sendSacrifice(com1)
             
-            #Verificando status servidor:
-            com1.sendData(b'\x22')
+            #Envia o handshake
+            com1.sendData(packages[0])
             time.sleep(0.5)
-
             sacrifice = False
+
+            
             connecting = True
 
             while connecting:
@@ -69,8 +73,9 @@ def main():
                             print('Requisitando servidor novamente')
                             start_time = time.time()
                             invalid = False
-                            com1.sendData(b'\x22')
-                            time.sleep(.5)
+
+                            com1.sendData(packages[0])
+                            time.sleep(0.5)
 
                         #Se a resposta for não
                         elif resposta == 'N':
@@ -84,47 +89,75 @@ def main():
 
                 #Se chegou algo no Buffer do client
                 elif com1.rx.getBufferLen() > 0:
+
+                    #Bit de sacrificio
                     if not sacrifice:
                         rxBuffer, nRx = receiveSacrifice(com1)
                         sacrifice = True
 
+                    #Le pacote resposta
                     else:
-                        rxBuffer, nRx = com1.getData(1)
-                        serverOn = True
-                        break
+                        head, nHd = com1.getData(10)
+
+                        if head[0] == 2:
+
+                            eop, nE = com1.getData(4)
+
+                            print('Chegou mensagem tipo 2')
+
+                            serverOn = True
+                            break
 
                     
             #Se o server tiver respondido:
             if serverOn:
                 print('Server respondeu\n')
                 #Enviando pacotes
-                nPackage = 0
+                nPackage = 1
 
                 while nPackage < len(packages):
-                    print('Enviando pacote {}'.format(nPackage + 1))
+
+                    print('Enviando pacote {}'.format(nPackage))
                     
                     #SendPackage
                     com1.sendData(packages[nPackage])
-                    time.sleep(0.5)
+                    time.sleep(.5)
 
                     waiting = True
                     #Espera resposta:
                     while waiting:
                         if com1.rx.getBufferLen() > 0:
+
                             #Aguarda para poder enviar proxima resposta
-                            rxBuffer, nRx = com1.getData(1)
+                            head, nH = com1.getData(10)
+                            time.sleep(0.1)
+                            
                             waiting = False
 
-                            if rxBuffer == b'\x55':
+
+                            if head[0] == 4:
+                                time.sleep(0.1)
+
+                                print('{} pacote foi sucesso\n'.format(nPackage))
+                                nPackage += 1
+
+
+                            elif head[0] == 5:
+
+                                time.sleep(0.1)
+
+                    
                                 print('---------------------ALERTA---------------------')
-                                print('{} pacote foi fracasso'.format(nPackage + 1))
+                                print('{} pacote foi fracasso'.format(nPackage))
                                 print('Recriando pacote para envio')
                                 print('------------------------------------------------\n')
-                                packages, i = createPackages(celeste,falseIndex=False,falsePayload=False,falseEOP = False)
 
-                            else:
-                                print('{} pacote foi sucesso\n'.format(nPackage + 1))
-                                nPackage +=1
+                                #Ultimo pacote recebido com sucesso é este
+                                nPackage = head[7] + 1
+                            
+                            eop, nE = com1.getData(4)
+
+
 
                 transmission = False
 

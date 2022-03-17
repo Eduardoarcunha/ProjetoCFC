@@ -96,3 +96,6 @@ def createPackages(message, falseIndex = False, falsePayload = False, falseEOP =
         nPackage += 1
 
     return packages, numberOfPackages
+
+
+print(40/3)

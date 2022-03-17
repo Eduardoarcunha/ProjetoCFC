@@ -10,15 +10,18 @@
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
 
+from struct import pack
 from enlace import *
 import time
 import numpy as np
 import utils
+import math
 
 #   python -m serial.tools.list_ports
 
 serialName = "COM8"
 
+id = 128
 
 def main():
     try:
@@ -40,83 +43,70 @@ def main():
             sacrifice = False
 
             #Servidor pronto para responder?
-            ready = True
-            wait = 2
+            ready = False
 
             while not ready:
                 if com1.rx.getBufferLen() > 0:
                     if not sacrifice:
                         rxBuffer, nRx = utils.receiveSacrifice(com1)
                         sacrifice = True
-                    else:
-                        rxBuffer, nRx = com1.getData(1)
-                        com1.rx.clearBuffer()
-                        wait -= 1
 
-                        if wait == 0:
+                    else:
+                        head, nRx = com1.getData(10)
+                        eop = com1.getData(4)
+
+
+                        if head[0] == 1 and head[1] == id:
+                            print('O recebimento é para ca')
+
+                            utils.sendSacrifice(com1)
+
+                            #Montar pacote
+                            package = utils.createPackages('ready')
+
+                            print('Enviando pacote do tipo 2!')
+                            com1.sendData(package)
+                            time.sleep(.5)
+
                             ready = True
 
 
-            print('Recebendo pedido client')
-            while hold:
-                if com1.rx.getBufferLen() > 0:
-                    #Verifica se ja foi recebido um bit de sacrificio
-                    if not sacrifice:
-                        rxBuffer, nRx = utils.receiveSacrifice(com1)
-                        sacrifice = True
-                    else:
-                        print('Recebendo pedido client')
-                        rxBuffer, nRx = com1.getData(1)
-                        hold = False
-
-            #Envia bit de sacrificio
-            utils.sendSacrifice(com1)
-            print('Enviando resposta\n')
-
-            #Envia resposta
-            com1.sendData(b'\x44')
-
-            n = 0
-            nPackages = 100
+            n = 1
+            nPackages = math.inf
 
             print('------------------')
             print('Recebendo pacotes')
             while n < nPackages:
 
-                #Possiveis erros!
-                eopError = False
-                indexError = False
                 payloadError = False
+                eopError = False
 
+                #Esperando recebimento
                 waiting = True
-                sacrifice = False
-
                 while waiting:
                     if com1.rx.getBufferLen() > 0:
-                        print('Lendo pacote {}'.format(n + 1))
+                        print('Lendo pacote {}'.format(n))
 
                         #Pega head
-                        head, nHd = com1.getData(10)
-                        nPackages = int(head[0])
-                        nPackage = int(head[1])
+                        head, nH = com1.getData(10)
+                        nPackages = int(head[3])
+                        nPackage = int(head[4])
                         
                         if nPackage != n:
                             print('Número do pacote incorreto!')
-                            indexError = True
                             
                         if nPackage == nPackages:
                             protocol = False
 
-                        payloadSize = int(head[2])
+                        #Tamanho do payload!
+                        payloadSize = int(head[5])
 
                         #Verifica tamanho payload
                         if com1.rx.getBufferLen() != payloadSize + 4:
-                            payloadError = True
                             print('-------------')
-                            print(com1.rx.getBufferLen(),payloadSize)
                             print('Tamanho do payload incorreto!\nInformado: {0}\nReal: {1}'.format(payloadSize,int(com1.rx.getBufferLen()) - 4))
 
-                        #Pega payload
+                        #Pega payload caso seu tamanho esteja certo!
                         if payloadError == False:
                             payload, nPl = com1.getData(payloadSize)
                         else:
@@ -125,25 +115,34 @@ def main():
                         #Pega EOP
                         eop, nEOP = com1.getData(4)
 
-                        if eop != b'\x00\x00\x00\x00':
+                        if eop != b'\xaa\xbb\xcc\xdd':
                             eopError = True
+                            print("ERRO EOP")
 
-                        erro = utils.tipoErro(eopError,indexError,payloadError)
+                        #erro = utils.tipoErro(eopError,indexError,payloadError)
 
-                        #Envia resposta
-                        if not eopError and not indexError and not payloadError:
+                        #Sem erro de eop ou payload
+                        if not eopError and not payloadError:
                             message = message + payload
-                            com1.sendData(b'\x44')
-                            n +=1
+
+                            package = utils.createPackages('correct')
+
+                            com1.sendData(package)
                             print('Pacote {} recebido com sucesso \n'.format(n))
-                            time.sleep(0.7)
+                            n +=1
+                            time.sleep(1)
                             
                         else:
                             #Codigo de erro
-                            com1.sendData(b'\x55')
+                            package = utils.createPackages('error', h7 = n-1)
+                            com1.rx.clearBuffer()
+
+                            com1.sendData(package)
+                            time.sleep(.5)
+                            print(package)
 
                             print('---------------------ALERTA-----------------------')
-                            print('Pacote {} não foi recebido com sucesso (ERRO: {})'.format(n + 1,erro))
+                            print('Pacote {} não foi recebido com sucesso (ERRO: {})'.format(n,erro))
                             print('--------------------------------------------------\n')
                             protocol = True
                             time.sleep(1)
