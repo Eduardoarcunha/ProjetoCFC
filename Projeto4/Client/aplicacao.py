@@ -53,7 +53,7 @@ def main():
             
             #Envia o handshake
             com1.sendData(packages[0])
-            time.sleep(0.5)
+            time.sleep(0.2)
             sacrifice = False
 
 
@@ -77,7 +77,7 @@ def main():
                             start_time = time.time()
                             invalid = False
                             com1.sendData(packages[0])
-                            time.sleep(0.5)
+                            time.sleep(0.2)
 
                             log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/1/'+ str(10 + 4)+ '\n'
                             print(log)
@@ -127,7 +127,7 @@ def main():
 
                     #SendPackage
                     com1.sendData(packages[nPackage])
-                    time.sleep(.7)
+                    time.sleep(.3)
 
                     timer1 = time.time()
                     timer2 = time.time()
@@ -139,7 +139,7 @@ def main():
                         #Reenvia as mensagens!
                         if time.time() - timer1 > 5:
                             com1.sendData(packages[nPackage])
-                            time.sleep(.7)
+                            time.sleep(.3)
 
                             lenPayload = packages[nPackage][5]
                             log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/3/'+ str(10 + lenPayload + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
@@ -200,7 +200,7 @@ def main():
                                 print(head)
                             
                             eop, nE = com1.getData(4)
-                            time.sleep(.4)
+                            time.sleep(.2)
 
                 transmission = False
 

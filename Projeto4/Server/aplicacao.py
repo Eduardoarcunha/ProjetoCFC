@@ -66,7 +66,7 @@ def main():
                             #Montar pacote tipo 2
                             package = utils.createPackages('ready')
                             com1.sendData(package)
-                            time.sleep(.5)
+                            time.sleep(.2)
 
                             ready = True
 
@@ -95,7 +95,7 @@ def main():
                         #Envia mensagem tipo 5
                         package = utils.createPackages('timeout')  
                         com1.sendData(package)
-                        time.sleep(.5) 
+                        time.sleep(.2) 
 
                         print('TIMEOUT ENVIOU')
 
@@ -107,7 +107,7 @@ def main():
                         package = utils.createPackages('error', h7 = n - 1)
                         print(n-1)
                         com1.sendData(package)
-                        time.sleep(.5)
+                        time.sleep(.2)
           
                     
                     #Chegou algum tipo de resposta
@@ -164,7 +164,7 @@ def main():
                                 com1.sendData(package)
                                 print('Pacote {} recebido com sucesso \n'.format(n))
                                 n += 1
-                                time.sleep(.5)
+                                time.sleep(.2)
                                 
                             else:
                                 #Codigo de erro
@@ -172,13 +172,12 @@ def main():
                                 com1.sendData(package)
 
                                 com1.rx.clearBuffer()
-                                time.sleep(.5)
+                                time.sleep(.2)
 
                                 print('---------------------ALERTA-----------------------')
                                 print('Pacote {0} não foi recebido com sucesso (ERRO:{1})'.format(n,erro))
                                 print('--------------------------------------------------\n')
                                 protocol = True
-                                time.sleep(.5)
                         
                         elif head[0] == 5:
                             waiting = False
