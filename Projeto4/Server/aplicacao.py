@@ -10,6 +10,7 @@
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
 
+from multiprocessing.connection import wait
 from struct import pack
 from enlace import *
 import time
@@ -33,13 +34,11 @@ def main():
         #Resposta final do cliente
         message = b''
 
-
         protocol = True
         while protocol:
             print('Iniciando protocolo')
 
-            #Esperando contato:
-            hold = True
+            #Bit de sacrificio
             sacrifice = False
 
             #Servidor pronto para responder?
@@ -55,24 +54,23 @@ def main():
                         head, nRx = com1.getData(10)
                         eop = com1.getData(4)
 
-
                         if head[0] == 1 and head[1] == id:
-                            print('O recebimento é para ca')
 
+                            nPackages = int(head[3])
+
+                            print('O request realmente é para este servidor!')
+
+                            #Bit de sacrificio
                             utils.sendSacrifice(com1)
 
-                            #Montar pacote
+                            #Montar pacote tipo 2
                             package = utils.createPackages('ready')
-
-                            print('Enviando pacote do tipo 2!')
                             com1.sendData(package)
                             time.sleep(.5)
 
                             ready = True
 
-
             n = 1
-            nPackages = math.inf
 
             print('------------------')
             print('Recebendo pacotes')
@@ -80,74 +78,110 @@ def main():
 
                 payloadError = False
                 eopError = False
+                indexError = False
+
+                timer1 = time.time()
+                timer2 = time.time()
 
                 #Esperando recebimento
                 waiting = True
                 while waiting:
-                    if com1.rx.getBufferLen() > 0:
-                        print('Lendo pacote {}'.format(n))
+
+                    if time.time() - timer2 > 20:
+                        waiting = False
+                        n = math.inf
+                        ready = False
+
+                        #Envia mensagem tipo 5
+                        package = utils.createPackages('timeout')  
+                        com1.sendData(package)
+                        time.sleep(.5) 
+
+                        print('TIMEOUT ENVIOU')
+
+                    elif time.time() - timer1 > 2:
+                        timer1 = time.time()  
+
+                        #Envia mensagem tipo 4
+                        com1.rx.clearBuffer()
+                        package = utils.createPackages('error', h7 = n - 1)
+                        print(n-1)
+                        com1.sendData(package)
+                        time.sleep(.5)
+          
+                    
+                    #Chegou algum tipo de resposta
+                    elif com1.rx.getBufferLen() > 0:
+                        waiting = False
+                        
 
                         #Pega head
                         head, nH = com1.getData(10)
-                        nPackages = int(head[3])
-                        nPackage = int(head[4])
-                        
-                        if nPackage != n:
-                            print('Número do pacote incorreto!')
+
+
+                        if head[0] == 3:
+                            print('Lendo pacote {}'.format(n))
+                            nPackage = int(head[4])
                             
-                        if nPackage == nPackages:
-                            protocol = False
+                            if nPackage != n:
+                                print('Número do pacote incorreto!')
+                                indexError = True
+                                
+                            if nPackage == nPackages:
+                                protocol = False
 
-                        #Tamanho do payload!
-                        payloadSize = int(head[5])
+                            #Tamanho do payload!
+                            payloadSize = int(head[5])
 
-                        #Verifica tamanho payload
-                        if com1.rx.getBufferLen() != payloadSize + 4:
-                            print('-------------')
-                            print('Tamanho do payload incorreto!\nInformado: {0}\nReal: {1}'.format(payloadSize,int(com1.rx.getBufferLen()) - 4))
+                            #Verifica tamanho payload
+                            if com1.rx.getBufferLen() != payloadSize + 4:
+                                print('-------------')
+                                print('Tamanho do payload incorreto!\nInformado: {0}\nReal: {1}'.format(payloadSize,int(com1.rx.getBufferLen()) - 4))
 
-                        #Pega payload caso seu tamanho esteja certo!
-                        if payloadError == False:
-                            payload, nPl = com1.getData(payloadSize)
-                        else:
-                            payloadTrash, nPT = com1.getData(com1.rx.getBufferLen() - 4)
+                            #Pega payload caso seu tamanho esteja certo!
+                            if payloadError == False:
+                                payload, nPl = com1.getData(payloadSize)
+                            else:
+                                payloadTrash, nPT = com1.getData(com1.rx.getBufferLen() - 4)
 
-                        #Pega EOP
-                        eop, nEOP = com1.getData(4)
+                            #Pega EOP
+                            eop, nEOP = com1.getData(4)
 
-                        if eop != b'\xaa\xbb\xcc\xdd':
-                            eopError = True
-                            print("ERRO EOP")
+                            if eop != b'\xaa\xbb\xcc\xdd':
+                                eopError = True
+                                print("EOP incorreto!")
 
-                        #erro = utils.tipoErro(eopError,indexError,payloadError)
+                            #erro = utils.tipoErro(eopError,indexError,payloadError)
 
-                        #Sem erro de eop ou payload
-                        if not eopError and not payloadError:
-                            message = message + payload
+                            #Sem nenhum tipo de erro
+                            if not eopError and not payloadError and not indexError:
+                                #Atualiza mensagem
+                                message = message + payload
 
-                            package = utils.createPackages('correct')
+                                package = utils.createPackages('correct',h7 = n)
+                                com1.sendData(package)
+                                print('Pacote {} recebido com sucesso \n'.format(n))
+                                n += 1
+                                time.sleep(.5)
+                                
+                            else:
+                                #Codigo de erro
+                                com1.rx.clearBuffer()
+                                package = utils.createPackages('error', h7 = n-1)
+                                com1.sendData(package)
+                                time.sleep(.5)
+                                print(package)
 
-                            com1.sendData(package)
-                            print('Pacote {} recebido com sucesso \n'.format(n))
-                            n +=1
-                            time.sleep(1)
-                            
-                        else:
-                            #Codigo de erro
-                            package = utils.createPackages('error', h7 = n-1)
-                            com1.rx.clearBuffer()
-
-                            com1.sendData(package)
-                            time.sleep(.5)
-                            print(package)
-
-                            print('---------------------ALERTA-----------------------')
-                            print('Pacote {} não foi recebido com sucesso (ERRO: {})'.format(n,erro))
-                            print('--------------------------------------------------\n')
-                            protocol = True
-                            time.sleep(1)
+                                print('---------------------ALERTA-----------------------')
+                                print('Pacote {} não foi recebido com sucesso (ERRO:)'.format(n))
+                                print('--------------------------------------------------\n')
+                                protocol = True
+                                time.sleep(.5)
                         
-                        waiting = False
+                        elif head[0] == 5:
+                            waiting = False
+                            n = math.inf
+                            print("TIMEOUT CHEGOU")
                     
             protocol = False
             print('Fim do recebimento')
@@ -156,9 +190,6 @@ def main():
         f.write(message)
         f.close()
                     
-
-
-        
     
         # Encerra comunicação
         print("-------------------------")

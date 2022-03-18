@@ -109,4 +109,22 @@ def createPackages(type, message = None):
             packages.append(package)
             nPackage += 1
 
+    elif type == 'timeout':
+
+        h0 = b'\x05'
+        h1 = b'\x80'
+        h2 = b'\x00'
+        h3 = b'\x00'
+        h4 = b'\x00'
+        h5 = b'\x00'
+        h6 = b'\x00'
+        h7 = h7
+        h8 = b'\x00'
+        h9 = b'\x00'
+
+        head = h0 + h1 + h2 + h3 + h4 + h5 + h6 + h7 + h8 + h9
+        package = head + eop
+
+        return package
+
     return packages, numberOfPackages

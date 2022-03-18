@@ -9,20 +9,19 @@
 #esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
-from utils import createPackages, receiveSacrifice, sendSacrifice
+from sympy import false
 import utils
 from enlace import *
 import time
 import numpy as np
+import math
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
 #   python -m serial.tools.list_ports
 # se estiver usando windows, o gerenciador de dispositivos informa a porta
 
-#use uma das 3 opcoes para atribuir à variável a porta usada
-#serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
-#serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
+
 serialName = "COM9"                  # Windows(variacao de)
 
 def main():
@@ -32,13 +31,13 @@ def main():
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         com1.enable()
         
-        imageR = './Projeto4/Client/celeste.png'
+        imageR = './celeste.png'
         celeste = open(imageR,'rb').read()
 
         
         #Cria pacotes, inclusive o handshake(package = 0)!
 
-        packages, nPackages = createPackages('transmission',celeste)
+        packages, nPackages = utils.createPackages('transmission',celeste)
         print(packages[0])
 
         print('Transmissao vai comecar')
@@ -73,7 +72,6 @@ def main():
                             print('Requisitando servidor novamente')
                             start_time = time.time()
                             invalid = False
-
                             com1.sendData(packages[0])
                             time.sleep(0.5)
 
@@ -92,7 +90,7 @@ def main():
 
                     #Bit de sacrificio
                     if not sacrifice:
-                        rxBuffer, nRx = receiveSacrifice(com1)
+                        rxBuffer, nRx = utils.receiveSacrifice(com1)
                         sacrifice = True
 
                     #Le pacote resposta
@@ -100,18 +98,15 @@ def main():
                         head, nHd = com1.getData(10)
 
                         if head[0] == 2:
+                            print('Handshake completo com sucesso!')
 
                             eop, nE = com1.getData(4)
-
-                            print('Chegou mensagem tipo 2')
-
                             serverOn = True
                             break
 
                     
             #Se o server tiver respondido:
             if serverOn:
-                print('Server respondeu\n')
                 #Enviando pacotes
                 nPackage = 1
 
@@ -123,30 +118,50 @@ def main():
                     com1.sendData(packages[nPackage])
                     time.sleep(.5)
 
+                    timer1 = time.time()
+                    timer2 = time.time()
+
                     waiting = True
                     #Espera resposta:
                     while waiting:
-                        if com1.rx.getBufferLen() > 0:
 
-                            #Aguarda para poder enviar proxima resposta
-                            head, nH = com1.getData(10)
-                            time.sleep(0.1)
+                        #Reenvia as mensagens!
+                        if time.time() - timer1 > 5:
+                            com1.sendData(packages[nPackage])
+                            time.sleep(.5)
                             
+                            #Reseta timer 1
+                            timer1 = time.time()
+
+                        elif time.time() - timer2 > 20:
+                            package = utils.createPackages('timeout')
+                            com1.sendData(package)
+
+                            print("TIMEOUT ENVIOU")
+
+                            #Mata comunicação
+                            nPackage = math.inf
+                            waiting = False
+                            transmission = False
+
+
+                        elif com1.rx.getBufferLen() > 0:
                             waiting = False
 
+                            head, nH = com1.getData(10)
 
+                            #Tipo 4: Ultima mensagem foi suecsso
                             if head[0] == 4:
-                                time.sleep(0.1)
-
                                 print('{} pacote foi sucesso\n'.format(nPackage))
                                 nPackage += 1
 
-
                             elif head[0] == 5:
+                                print("TIMEOUT CHEGOU")
+                                nPackage = math.inf
+                                transmission = False
 
-                                time.sleep(0.1)
-
-                    
+                            #Ultima mensagem foi fracasso
+                            elif head[0] == 6:
                                 print('---------------------ALERTA---------------------')
                                 print('{} pacote foi fracasso'.format(nPackage))
                                 print('Recriando pacote para envio')
@@ -154,10 +169,9 @@ def main():
 
                                 #Ultimo pacote recebido com sucesso é este
                                 nPackage = head[7] + 1
+                                print(head)
                             
                             eop, nE = com1.getData(4)
-
-
 
                 transmission = False
 
