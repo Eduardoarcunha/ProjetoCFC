@@ -15,6 +15,7 @@ from enlace import *
 import time
 import numpy as np
 import math
+from datetime import datetime
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -38,7 +39,6 @@ def main():
         #Cria pacotes, inclusive o handshake(package = 0)!
 
         packages, nPackages = utils.createPackages('transmission',celeste)
-        print(packages[0])
 
         print('Transmissao vai comecar')
         print('{} pacotes serão enviados'.format(nPackages))
@@ -55,6 +55,10 @@ def main():
             com1.sendData(packages[0])
             time.sleep(0.5)
             sacrifice = False
+
+
+            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/1/'+ str(10 + 4)+ '\n'
+            print(log)
 
             
             connecting = True
@@ -74,6 +78,9 @@ def main():
                             invalid = False
                             com1.sendData(packages[0])
                             time.sleep(0.5)
+
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/1/'+ str(10 + 4)+ '\n'
+                            print(log)
 
                         #Se a resposta for não
                         elif resposta == 'N':
@@ -97,8 +104,10 @@ def main():
                     else:
                         head, nHd = com1.getData(10)
 
+
                         if head[0] == 2:
-                            print('Handshake completo com sucesso!')
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/2/'+ str(10 + 4)+ '\n'
+                            print(log)
 
                             eop, nE = com1.getData(4)
                             serverOn = True
@@ -112,11 +121,13 @@ def main():
 
                 while nPackage < len(packages):
 
-                    print('Enviando pacote {}'.format(nPackage))
-                    
+                    lenPayload = packages[nPackage][5]
+                    log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/3/'+ str(10 + lenPayload + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
+                    print(log)
+
                     #SendPackage
                     com1.sendData(packages[nPackage])
-                    time.sleep(.5)
+                    time.sleep(.7)
 
                     timer1 = time.time()
                     timer2 = time.time()
@@ -128,7 +139,11 @@ def main():
                         #Reenvia as mensagens!
                         if time.time() - timer1 > 5:
                             com1.sendData(packages[nPackage])
-                            time.sleep(.5)
+                            time.sleep(.7)
+
+                            lenPayload = packages[nPackage][5]
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/3/'+ str(10 + lenPayload + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
+                            print(log)
                             
                             #Reseta timer 1
                             timer1 = time.time()
@@ -137,7 +152,8 @@ def main():
                             package = utils.createPackages('timeout')
                             com1.sendData(package)
 
-                            print("TIMEOUT ENVIOU")
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/5/'+ '14' + '\n'
+                            print(log)
 
                             #Mata comunicação
                             nPackage = math.inf
@@ -152,26 +168,39 @@ def main():
 
                             #Tipo 4: Ultima mensagem foi suecsso
                             if head[0] == 4:
-                                print('{} pacote foi sucesso\n'.format(nPackage))
+
+                                log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/4/'+ '14' + '\n'
+                                print(log)
+
                                 nPackage += 1
 
+
                             elif head[0] == 5:
-                                print("TIMEOUT CHEGOU")
+
+                                log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/5/'+ '14' + '\n'
+                                print(log)
+
                                 nPackage = math.inf
                                 transmission = False
 
                             #Ultima mensagem foi fracasso
                             elif head[0] == 6:
-                                print('---------------------ALERTA---------------------')
-                                print('{} pacote foi fracasso'.format(nPackage))
-                                print('Recriando pacote para envio')
-                                print('------------------------------------------------\n')
+
+                                log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/6/'+ '14' + '\n'
+                                print(log)
+
+
+                                # print('---------------------ALERTA---------------------')
+                                # print('{} pacote foi fracasso'.format(nPackage))
+                                # print('Recriando pacote para envio')
+                                # print('------------------------------------------------\n')
 
                                 #Ultimo pacote recebido com sucesso é este
                                 nPackage = head[7] + 1
                                 print(head)
                             
                             eop, nE = com1.getData(4)
+                            time.sleep(.4)
 
                 transmission = False
 

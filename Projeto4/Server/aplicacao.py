@@ -117,6 +117,7 @@ def main():
 
                         #Pega head
                         head, nH = com1.getData(10)
+                        time.sleep(.2)
 
 
                         if head[0] == 3:
@@ -135,6 +136,7 @@ def main():
 
                             #Verifica tamanho payload
                             if com1.rx.getBufferLen() != payloadSize + 4:
+                                payloadError = True
                                 print('-------------')
                                 print('Tamanho do payload incorreto!\nInformado: {0}\nReal: {1}'.format(payloadSize,int(com1.rx.getBufferLen()) - 4))
 
@@ -151,7 +153,7 @@ def main():
                                 eopError = True
                                 print("EOP incorreto!")
 
-                            #erro = utils.tipoErro(eopError,indexError,payloadError)
+                            erro = utils.tipoErro(eopError,indexError,payloadError)
 
                             #Sem nenhum tipo de erro
                             if not eopError and not payloadError and not indexError:
@@ -166,14 +168,14 @@ def main():
                                 
                             else:
                                 #Codigo de erro
-                                com1.rx.clearBuffer()
                                 package = utils.createPackages('error', h7 = n-1)
                                 com1.sendData(package)
+
+                                com1.rx.clearBuffer()
                                 time.sleep(.5)
-                                print(package)
 
                                 print('---------------------ALERTA-----------------------')
-                                print('Pacote {} não foi recebido com sucesso (ERRO:)'.format(n))
+                                print('Pacote {0} não foi recebido com sucesso (ERRO:{1})'.format(n,erro))
                                 print('--------------------------------------------------\n')
                                 protocol = True
                                 time.sleep(.5)
