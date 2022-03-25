@@ -9,6 +9,7 @@
 #esta é a camada superior, de aplicação do seu software de comunicação serial UART.
 #para acompanhar a execução e identificar erros, construa prints ao longo do código! 
 
+from operator import index
 from sympy import false
 import utils
 from enlace import *
@@ -23,10 +24,13 @@ from datetime import datetime
 # se estiver usando windows, o gerenciador de dispositivos informa a porta
 
 
-serialName = "COM9"                  # Windows(variacao de)
+serialName = "COM8"                  # Windows(variacao de)
 
 def main():
+    i2 = False
+    indexError = False
     try:
+        logs = []
         com1 = enlace(serialName)
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -46,7 +50,8 @@ def main():
         serverOn = False
         transmission = True
 
-        start_time = time.time()
+        timer1 = time.time()
+        timer2 = time.time()
         while transmission:
             #Bit de sacrificio
             utils.sendSacrifice(com1)
@@ -54,43 +59,49 @@ def main():
             #Envia o handshake
             com1.sendData(packages[0])
             time.sleep(0.2)
+
             sacrifice = False
 
-
             log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/1/'+ str(10 + 4)+ '\n'
+            logs.append(log)
             print(log)
 
             
             connecting = True
 
             while connecting:
+                if time.time() - timer2 > 20:
 
-                if time.time() - start_time > 5:
-                    invalid = True
+                    #Envia mensagem tipo timeout
+                    package = utils.createPackages('timeout')  
+                    com1.sendData(package)
+                    time.sleep(.2)
 
-                    while invalid:
-                        resposta = input('Servidor inativo. Tentar novamente? S/N')
+                    log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/5/'+ '14' + '\n'
+                    logs.append(log)
+                    print(log)
 
-                        #Se a resposta for sim
-                        if resposta == 'S':
-                            print('Requisitando servidor novamente')
-                            start_time = time.time()
-                            invalid = False
-                            com1.sendData(packages[0])
-                            time.sleep(0.2)
+                    connecting = False
+                    transmission = False
 
-                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/1/'+ str(10 + 4)+ '\n'
-                            print(log)
+                    #Incoerencia 2
+                    with open('Client2.txt','w') as f:
+                        f.writelines(logs)
 
-                        #Se a resposta for não
-                        elif resposta == 'N':
-                            connecting = False
-                            invalid = False
-                            transmission = False
+                    break
 
-                        #Se a respostas for invalida
-                        else:
-                            print('Resposta invalida')
+
+                elif time.time() - timer1 > 6:
+                    timer1 = time.time()  
+
+                    #Envia mensagem tipo 4
+                    com1.rx.clearBuffer()
+                    com1.sendData(packages[0])
+                    time.sleep(0.2)
+
+                    log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/1/'+ str(10 + 4)+ '\n'
+                    logs.append(log)
+                    print(log)
 
                 #Se chegou algo no Buffer do client
                 elif com1.rx.getBufferLen() > 0:
@@ -107,6 +118,7 @@ def main():
 
                         if head[0] == 2:
                             log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/2/'+ str(10 + 4)+ '\n'
+                            logs.append(log)
                             print(log)
 
                             eop, nE = com1.getData(4)
@@ -119,10 +131,18 @@ def main():
                 #Enviando pacotes
                 nPackage = 1
 
+                #Enviando pacotes
                 while nPackage < len(packages):
+
+                    if indexError and nPackage == 5:
+                        nPackage = 6
+                        indexError = False
+                        i2 = True
+
 
                     lenPayload = packages[nPackage][5]
                     log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/3/'+ str(10 + lenPayload + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
+                    logs.append(log)
                     print(log)
 
                     #SendPackage
@@ -143,6 +163,7 @@ def main():
 
                             lenPayload = packages[nPackage][5]
                             log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/3/'+ str(10 + lenPayload + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
+                            logs.append(log)
                             print(log)
                             
                             #Reseta timer 1
@@ -153,12 +174,17 @@ def main():
                             com1.sendData(package)
 
                             log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/5/'+ '14' + '\n'
+                            logs.append(log)
                             print(log)
 
                             #Mata comunicação
                             nPackage = math.inf
                             waiting = False
                             transmission = False
+
+                            #Incoerencia 4
+                            with open('Client4.txt','w') as f:
+                                f.writelines(logs)
 
 
                         elif com1.rx.getBufferLen() > 0:
@@ -170,6 +196,7 @@ def main():
                             if head[0] == 4:
 
                                 log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/4/'+ '14' + '\n'
+                                logs.append(log)
                                 print(log)
 
                                 nPackage += 1
@@ -178,6 +205,7 @@ def main():
                             elif head[0] == 5:
 
                                 log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/5/'+ '14' + '\n'
+                                logs.append(log)
                                 print(log)
 
                                 nPackage = math.inf
@@ -187,22 +215,23 @@ def main():
                             elif head[0] == 6:
 
                                 log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/6/'+ '14' + '\n'
+                                logs.append(log)
                                 print(log)
-
-
-                                # print('---------------------ALERTA---------------------')
-                                # print('{} pacote foi fracasso'.format(nPackage))
-                                # print('Recriando pacote para envio')
-                                # print('------------------------------------------------\n')
 
                                 #Ultimo pacote recebido com sucesso é este
                                 nPackage = head[7] + 1
-                                print(head)
                             
                             eop, nE = com1.getData(4)
                             time.sleep(.2)
 
                 transmission = False
+
+        if i2 == True:
+            with open('Client2.txt','w') as f:
+                f.writelines(logs)
+        else:
+            with open('Client1.txt','w') as f:
+                f.writelines(logs)
 
         # Encerra comunicação
         print("-------------------------")

@@ -17,14 +17,19 @@ import time
 import numpy as np
 import utils
 import math
+from datetime import datetime
 
 #   python -m serial.tools.list_ports
 
 serialName = "COM8"
-
 id = 128
 
+timeoutError1 = False
+timeoutError2 = False
+
 def main():
+    i2 = False
+    logs = []
     try:
         com1 = enlace(serialName)      
     
@@ -51,8 +56,14 @@ def main():
                         sacrifice = True
 
                     else:
+                        while timeoutError1:
+                            continue
                         head, nRx = com1.getData(10)
                         eop = com1.getData(4)
+
+                        log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/1/'+ '14' + '\n'
+                        logs.append(log)
+                        print(log)        
 
                         if head[0] == 1 and head[1] == id:
 
@@ -67,6 +78,10 @@ def main():
                             package = utils.createPackages('ready')
                             com1.sendData(package)
                             time.sleep(.2)
+
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/2/'+ '14' + '\n'
+                            logs.append(log)
+                            print(log)  
 
                             ready = True
 
@@ -97,42 +112,62 @@ def main():
                         com1.sendData(package)
                         time.sleep(.2) 
 
-                        print('TIMEOUT ENVIOU')
+                        log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/5/'+ str(10 + 4) + '\n'
+                        logs.append(log)
+                        print(log)
+
+                        with open('Server6.txt','w') as f:
+                            f.writelines(logs)
 
                     elif time.time() - timer1 > 2:
                         timer1 = time.time()  
 
-                        #Envia mensagem tipo 4
+                        #Envia mensagem tipo 6
                         com1.rx.clearBuffer()
                         package = utils.createPackages('error', h7 = n - 1)
-                        print(n-1)
+
+                        log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/6/'+ str(10 + 4) + '\n'
+                        logs.append(log)
+                        print(log)
+
                         com1.sendData(package)
                         time.sleep(.2)
           
                     
                     #Chegou algum tipo de resposta
                     elif com1.rx.getBufferLen() > 0:
+
+                        while timeoutError2:
+                            continue
+
                         waiting = False
                         
 
                         #Pega head
                         head, nH = com1.getData(10)
                         time.sleep(.2)
+                        
 
 
                         if head[0] == 3:
-                            print('Lendo pacote {}'.format(n))
+
                             nPackage = int(head[4])
+
+                            #Tamanho do payload!
+                            payloadSize = int(head[5])
+
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/3/'+ str(10 + (payloadSize - 1) + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
+                            logs.append(log)
+                            print(log)
                             
                             if nPackage != n:
                                 print('Número do pacote incorreto!')
                                 indexError = True
+                                i2 = True
                                 
                             if nPackage == nPackages:
                                 protocol = False
-
-                            #Tamanho do payload!
-                            payloadSize = int(head[5])
+                            
 
                             #Verifica tamanho payload
                             if com1.rx.getBufferLen() != payloadSize + 4:
@@ -162,7 +197,12 @@ def main():
 
                                 package = utils.createPackages('correct',h7 = n)
                                 com1.sendData(package)
-                                print('Pacote {} recebido com sucesso \n'.format(n))
+
+                                log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/4/'+ str(10 + 4) + '\n'
+                                logs.append(log)
+                                print(log)
+
+
                                 n += 1
                                 time.sleep(.2)
                                 
@@ -170,6 +210,10 @@ def main():
                                 #Codigo de erro
                                 package = utils.createPackages('error', h7 = n-1)
                                 com1.sendData(package)
+
+                                log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/6/'+ str(10 + 4) + '\n'
+                                logs.append(log)
+                                print(log)
 
                                 com1.rx.clearBuffer()
                                 time.sleep(.2)
@@ -183,13 +227,29 @@ def main():
                             waiting = False
                             n = math.inf
                             print("TIMEOUT CHEGOU")
+
+                            
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/5/'+ str(10 + 4) + '\n'
+                            logs.append(log)
+                            print(log)
+
+
                     
             protocol = False
             print('Fim do recebimento')
 
+            
+
         f = open('./celeste.png','wb')
         f.write(message)
         f.close()
+
+        if i2 == True:
+            with open('Server2.txt','w') as f:
+                f.writelines(logs)
+        else:
+            with open('Server1.txt','w') as f:
+                f.writelines(logs)
                     
     
         # Encerra comunicação
