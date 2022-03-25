@@ -21,7 +21,7 @@ from datetime import datetime
 
 #   python -m serial.tools.list_ports
 
-serialName = "COM8"
+serialName = "COM7"
 id = 128
 
 timeoutError1 = False
@@ -29,6 +29,7 @@ timeoutError2 = False
 
 def main():
     i2 = False
+    i5=False
     logs = []
     try:
         com1 = enlace(serialName)      
@@ -122,6 +123,9 @@ def main():
                     elif time.time() - timer1 > 2:
                         timer1 = time.time()  
 
+                        if i2 == False:
+                            i5 = True
+
                         #Envia mensagem tipo 6
                         com1.rx.clearBuffer()
                         package = utils.createPackages('error', h7 = n - 1)
@@ -156,14 +160,15 @@ def main():
                             #Tamanho do payload!
                             payloadSize = int(head[5])
 
-                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/3/'+ str(10 + (payloadSize - 1) + 4) + '/' + str(nPackage) + '/' + str(nPackages) + '\n'
+                            log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/receb/3/'+ str(10 + payloadSize  + 4) + '/' + str(nPackage) + '/' + str(nPackages-1) + '\n'
                             logs.append(log)
                             print(log)
                             
                             if nPackage != n:
                                 print('Número do pacote incorreto!')
                                 indexError = True
-                                i2 = True
+                                if n == 5:
+                                    i2 = True
                                 
                             if nPackage == nPackages:
                                 protocol = False
@@ -207,9 +212,13 @@ def main():
                                 time.sleep(.2)
                                 
                             else:
+
                                 #Codigo de erro
                                 package = utils.createPackages('error', h7 = n-1)
                                 com1.sendData(package)
+
+                                if n != 5:
+                                    i5 = True
 
                                 log = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '/envio/6/'+ str(10 + 4) + '\n'
                                 logs.append(log)
@@ -247,6 +256,12 @@ def main():
         if i2 == True:
             with open('Server2.txt','w') as f:
                 f.writelines(logs)
+        elif i5==True:
+            with open("Server5.txt",'w') as f:
+                f.writelines(logs)
+
+
+        
         else:
             with open('Server1.txt','w') as f:
                 f.writelines(logs)
