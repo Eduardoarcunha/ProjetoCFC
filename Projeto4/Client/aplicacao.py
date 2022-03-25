@@ -28,7 +28,9 @@ serialName = "COM8"                  # Windows(variacao de)
 
 def main():
     i2 = False
-    indexError = False
+    i5 = False
+    indexError = True
+    indexErrorC = indexError
     try:
         logs = []
         com1 = enlace(serialName)
@@ -85,7 +87,7 @@ def main():
                     transmission = False
 
                     #Incoerencia 2
-                    with open('Client2.txt','w') as f:
+                    with open('Client3.txt','w') as f:
                         f.writelines(logs)
 
                     break
@@ -137,7 +139,8 @@ def main():
                     if indexError and nPackage == 5:
                         nPackage = 6
                         indexError = False
-                        i2 = True
+                        if i5 == False:
+                            i2 = True
 
 
                     lenPayload = packages[nPackage][5]
@@ -218,6 +221,10 @@ def main():
                                 logs.append(log)
                                 print(log)
 
+                                #Erro no pacote
+                                if not i2:
+                                    i5 = True
+
                                 #Ultimo pacote recebido com sucesso é este
                                 nPackage = head[7] + 1
                             
@@ -226,9 +233,12 @@ def main():
 
                 transmission = False
 
-        if i2 == True:
+        if indexErrorC == True:
             with open('Client2.txt','w') as f:
-                f.writelines(logs)
+                f.writelines(logs),
+        elif i2 == True or i5 == True:
+            with open('Client5.txt','w') as f:
+                f.writelines(logs)     
         else:
             with open('Client1.txt','w') as f:
                 f.writelines(logs)
