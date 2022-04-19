@@ -1,6 +1,8 @@
 import random
 import time
 from Package import Package
+import binascii
+import crcmod
 
 
 def tipoErro(eopError,indexError,payloadError):
@@ -53,3 +55,25 @@ def createPackage(type, originId, destinyId, nPackage = None, nPackages = None):
     package = Package(type,originId,destinyId,nPackage = nPackage,nPackages = nPackages)
     return package.getContent()
 
+def createCRC(payload):
+
+        if payload is None:
+            return b'\x00', b'\x00'
+
+        else:
+
+            payloadHex = binascii.hexlify(payload)
+            payloadBits = binascii.unhexlify(payloadHex)
+
+
+            crc16 = crcmod.predefined.Crc('crc-16')
+            crc16.update(payloadBits)
+            hexString = crc16.hexdigest()
+
+
+
+            h8 = bytes.fromhex(hexString[0:2])
+            h9 = bytes.fromhex(hexString[2:])
+
+
+            return h8, h9

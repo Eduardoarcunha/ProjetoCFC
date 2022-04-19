@@ -128,6 +128,7 @@ class Server:
             payloadError = False
             eopError = False
             indexError = False
+            crcError = False
 
             self.resetTimers()
 
@@ -181,10 +182,21 @@ class Server:
                         if eop != b'\xaa\xbb\xcc\xdd':
                             eopError = True
 
-                        #FUNCAO DE ERRO AQUI
+                        if payload is not None:
+                            #VERIFICA CRC
+                            crc8 = head[8].to_bytes(1, byteorder='big')
+                            crc9 = head[9].to_bytes(1, byteorder='big')
+                            
+                            crc8novo, crc9novo = createCRC(payload)
+
+                            if (crc8 != crc8novo) or (crc9 != crc9novo):
+                                print(crc8,(crc8novo))
+                                print(crc9,(crc9novo))
+                                crcError = True
 
 
-                        if not eopError and not payloadError and not indexError:
+                        if not eopError and not payloadError and not indexError and not crcError:
+                            
                             #Atualiza mensagem
                             self.message = self.message + payload
 

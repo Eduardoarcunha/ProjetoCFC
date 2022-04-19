@@ -1,9 +1,12 @@
+import binascii
+import binascii
 from enlace import *
 import time
 import numpy as np
 import utils
 import math
 from utils import *
+import crcmod
 
 class Package:
 
@@ -16,8 +19,8 @@ class Package:
         self.nPackage = nPackage
         self.nPackages = nPackages
 
-        self.head = self.createHead()
         self.payload = payload
+        self.head = self.createHead()
         self.eop = b'\xAA\xBB\xCC\xDD'
 
 
@@ -27,8 +30,7 @@ class Package:
         h1 = self.originId.to_bytes(1,byteorder='big')
         h2 = self.destinyId.to_bytes(1,byteorder='big')
 
-        h8 = b'\x00'
-        h9 = b'\x00'
+        h8,h9 = self.createCRC()
 
         if self.type == 1:
             h3 = self.nPackages.to_bytes(1,byteorder='big')
@@ -81,3 +83,26 @@ class Package:
             return self.head + self.eop
         else:
             return self.head + self.payload + self.eop
+
+    def createCRC(self):
+
+        if self.payload is None:
+            return b'\x00', b'\x00'
+
+        else:
+
+            payloadHex = binascii.hexlify(self.payload)
+            payloadBits = binascii.unhexlify(payloadHex)
+
+
+            crc16 = crcmod.predefined.Crc('xmodem')
+            crc16.update(payloadBits)
+            hexString = crc16.hexdigest()
+
+
+
+            h8 = bytes.fromhex(hexString[0:2])
+            h9 = bytes.fromhex(hexString[2:])
+
+
+            return h8, h9
